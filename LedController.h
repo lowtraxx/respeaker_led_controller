@@ -61,6 +61,6 @@ class LedController {
   int led_gpio_file_descriptor_;
 
   // Other
-  bool initialized_;
+  bool powered_up_;
   int number_of_leds_;
 };

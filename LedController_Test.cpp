@@ -15,35 +15,54 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <new>
+#include <signal.h>
+
+#define NUMBER_OF_LEDS 12
+#define MAX_BRIGHTNESS 31
+
+// Interruption Signal Handler, so we clean up after Ctrl+C
+void IntSignalHandler(int sig) {
+  LedController *led_controller = &LedController::GetInstance();
+  led_controller->PowerDown();
+  exit(0);
+}
 
 int main() {
+  // Install the signal handler
+  signal(SIGINT, IntSignalHandler);
+
   // Initialize the Controller
-  // with 12 LEDs
   LedController *led_controller = &LedController::GetInstance();
-  led_controller->PowerUp(12);
+  led_controller->PowerUp(NUMBER_OF_LEDS);
 
-  // Clear the LEDs
-  led_controller->Clear();
+  // Rotating the LEDs one time
+  for(int i = 0; i <= NUMBER_OF_LEDS; i++)
+  {
+    // Clear the LEDs
+    led_controller->Clear();
 
-  // Set a few pixel to test
-  // Red
-  led_controller->SetPixelColor(0, 24, 0, 0, 31);
+    // Set a few pixel to test
+    // Red
+    led_controller->SetPixelColor(i % NUMBER_OF_LEDS, 24, 0, 0, MAX_BRIGHTNESS);
 
-  // Green
-  led_controller->SetPixelColor(3, 0, 24, 0, 31);
+    // Green
+    led_controller->SetPixelColor((i + 3) % NUMBER_OF_LEDS, 0, 24, 0, MAX_BRIGHTNESS);
 
-  // Blue
-  led_controller->SetPixelColor(6, 0, 0, 24, 31);
+    // Blue
+    led_controller->SetPixelColor((i + 6) % NUMBER_OF_LEDS, 0, 0, 24, MAX_BRIGHTNESS);
 
-  // White
-  led_controller->SetPixelColor(9, 12, 12, 12, 31);
+    // White
+    led_controller->SetPixelColor((i + 9) % NUMBER_OF_LEDS, 12, 12, 12, MAX_BRIGHTNESS);
 
-  // Show the pixels
-  led_controller->Show();
+    // Show the pixels
+    led_controller->Show();
 
-  // Sleep for a few seconds and the clean up
-  sleep(3);
-  led_controller->Clear();
+    // Sleep for a few seconds and the clean up
+    sleep(1);
+  }
+
+  // Shutdown
+  led_controller->PowerDown();
 
   return 0;
 }

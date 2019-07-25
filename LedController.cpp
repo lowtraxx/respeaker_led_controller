@@ -21,22 +21,29 @@
 #include <iostream>
 
 bool LedController::PowerUp(int number_of_leds) {
-  // Power on the LED via GPIO
-  if (!SetGpioPower(true)) return false;
+  if(!powered_up_) {
+    // Power on the LED via GPIO
+    led_gpio_file_descriptor_ = -1;
+    if (!SetGpioPower(true)) return false;
 
-  // Init the SPI device
-  if (!InitSpiDevice()) return false;
+    // Init the SPI device
+    led_spi_file_descriptor_ = -1;
+    if (!InitSpiDevice()) return false;
 
-  // Allocate our pixel map
-  pixel_map_ = new uint8_t[number_of_leds * 4];
+    // Allocate our pixel map
+    pixel_map_ = new uint8_t[number_of_leds * 4];
 
-  // We are initialized
-  initialized_ = true;
+    // Set the now known number of leds
+    number_of_leds_ = number_of_leds;
 
-  // Set the now known number of leds
-  number_of_leds_ = number_of_leds;
+    // We are initialized
+    powered_up_ = true;
 
-  return true;
+    return true;
+  } else {
+    std::cout << "Already powered up." << std::endl;
+    return false;
+  }
 }
 
 bool LedController::InitSpiDevice() {
@@ -82,10 +89,14 @@ bool LedController::SetGpioPower(bool power) {
 
   // Open the GPIO device
   struct gpiohandle_request led_gpio_request;
-  led_gpio_file_descriptor_ = open("/dev/gpiochip0", 0);
-  if (led_gpio_file_descriptor_ < 0) {
-    std::cout << "Failed to open LED GPIO device" << std::endl;
-    return false;
+
+  // Check if the file descriptor is already open
+  if(led_gpio_file_descriptor_ < 0) {
+    led_gpio_file_descriptor_ = open("/dev/gpiochip0", 0);
+    if (led_gpio_file_descriptor_ < 0) {
+      std::cout << "Failed to open LED GPIO device" << std::endl;
+      return false;
+    }
   }
 
   // Set the flags needed in the request
@@ -99,9 +110,9 @@ bool LedController::SetGpioPower(bool power) {
   // Try to send the power command
   int ioctl_ret_val = 0;
   if ((ioctl_ret_val = ioctl(led_gpio_file_descriptor_,
-                             GPIO_GET_LINEHANDLE_IOCTL, &led_gpio_request)) <
-      0) {
-    std::cout << "Failed to send power " << (power ? " on " : " off ")
+                             GPIO_GET_LINEHANDLE_IOCTL, 
+                             &led_gpio_request)) < 0) {
+    std::cout << "Failed to send power" << (power ? " on " : " off ")
               << "signal to the GPIO" << std::endl;
     return false;
   }
@@ -111,8 +122,8 @@ bool LedController::SetGpioPower(bool power) {
 
 void LedController::SetPixelColor(int pixel, uint8_t r, uint8_t g, uint8_t b,
                                   uint8_t brightness) {
-  if (!initialized_) {
-    std::cout << "Not initialized. Please call Init first." << std::endl;
+  if (!powered_up_) {
+    std::cout << "Not powered up. Please call PowerUp first." << std::endl;
     return;
   }
 
@@ -133,8 +144,8 @@ void LedController::SetPixelColor(int pixel, uint8_t r, uint8_t g, uint8_t b,
 }
 
 void LedController::Clear() {
-  if (!initialized_) {
-    std::cout << "Not initialized. Please call Init first." << std::endl;
+  if (!powered_up_) {
+    std::cout << "Not powered up. Please call PowerUp first." << std::endl;
     return;
   }
 
@@ -151,8 +162,8 @@ void LedController::Clear() {
 }
 
 void LedController::Show() {
-  if (!initialized_) {
-    std::cout << "Not initialized. Please call Init first." << std::endl;
+  if (!powered_up_) {
+    std::cout << "Not powered up. Please call PowerUp first." << std::endl;
     return;
   }
 
@@ -205,28 +216,40 @@ void LedController::MakeTransfer(uint8_t *data, int len, int speed_in_hz,
 }
 
 void LedController::PowerDown() {
-  // Clear the LEDs
-  Clear();
+  if(powered_up_) {
+    // Clear the LEDs
+    Clear();
 
-  // Close the SPI connection
-  if (led_spi_file_descriptor_ >= 0) close(led_spi_file_descriptor_);
+    // Close the SPI connection
+    if (led_spi_file_descriptor_ >= 0) {
+      close(led_spi_file_descriptor_);
+      led_spi_file_descriptor_ = -1;
+    }
 
-  // Power off GPIO and close the connection
-  if (led_gpio_file_descriptor_ >= 0) {
-    SetGpioPower(false);
-    close(led_gpio_file_descriptor_);
+    // Power off GPIO and close the connection
+    if (led_gpio_file_descriptor_ >= 0) {
+
+      // Setting the Gpio to power down does not work
+      // currently, as it does not accept the power state off.
+      // Closing the fd seems to accomplish the same thing,
+      // so I am commenting this for now.
+      // SetGpioPower(false);
+
+      close(led_gpio_file_descriptor_);
+      led_gpio_file_descriptor_ = -1;
+    }
+
+    // Cleanup the pixel map
+    if (pixel_map_) {
+      delete pixel_map_;
+      pixel_map_ = nullptr;
+    }
+
+    // Reset the members
+    spi_mode_ = 0;
+    bits_per_word_ = 0;
+    speed_in_hz_ = 0;
+    number_of_leds_ = 0;
+    powered_up_ = false;
   }
-
-  // Cleanup the pixel map
-  if (pixel_map_) {
-    delete pixel_map_;
-    pixel_map_ = nullptr;
-  }
-
-  // Reset the members
-  spi_mode_ = 0;
-  bits_per_word_ = 0;
-  speed_in_hz_ = 0;
-  number_of_leds_ = 0;
-  initialized_ = false;
 }
