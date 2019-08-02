@@ -6,5 +6,5 @@ The controller does not need any additional dependencies like WiringPi or libapa
 # Build
 You can either just add the LedController class to your project and use it or you can compile it with the test app, to see how it is used. (A Makefile will follow at some point)
 ```sh
-$ gcc LedController.cpp LedController_Test.cpp -lstdc++
+$ gcc led_controller.cc led_controller_sample.cc -lstdc++
 ```
