@@ -5,7 +5,7 @@
 ** but you have to leave this header intact.
 **
 **
-** LedController.cpp
+** led_controller.cc
 ** A Helper class to control the LEDs of the ReSpeaker 4mic_hat for the RasPi
 **
 ** Author: Oliver Pahl

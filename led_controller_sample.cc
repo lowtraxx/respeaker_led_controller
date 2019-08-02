@@ -5,7 +5,7 @@
 ** but you have to leave this header intact.
 **
 **
-** LedController_Test.cpp
+** led_controller_sample.cc
 ** A simple test app, that lights 4 LEDs of the ReSpeaker 4mic_hat using the
 ** LedController class
 **
