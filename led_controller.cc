@@ -10,7 +10,7 @@
 **
 ** Author: Oliver Pahl
 ** -------------------------------------------------------------------------*/
-#include "LedController.h"
+#include "led_controller.h"
 
 #include <linux/gpio.h>
 #include <linux/spi/spidev.h>

@@ -11,7 +11,7 @@
 **
 ** Author: Oliver Pahl
 ** -------------------------------------------------------------------------*/
-#include "LedController.h"
+#include "led_controller.h"
 #include <unistd.h>
 #include <cstdlib>
 #include <new>
